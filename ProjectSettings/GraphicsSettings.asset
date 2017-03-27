@@ -25,7 +25,7 @@ GraphicsSettings:
   m_LightmapKeepPlain: 1
   m_LightmapKeepDirCombined: 1
   m_LightmapKeepDirSeparate: 1
-  m_LightmapKeepDynamicPlain: 1
+  m_LightmapKeepDynamicPlain: 0
   m_LightmapKeepDynamicDirCombined: 1
   m_LightmapKeepDynamicDirSeparate: 1
   m_FogStripping: 0
