@@ -9,9 +9,21 @@ public class GameController : NetworkBehaviour  {
 	[SerializeField] private GameObject ball;
 	[SerializeField] private float noHitResetSeconds=20f; // через сколько времени после последнего касания шаром ракетки ресетнуть его
 	[SerializeField] private MenuController menu;
+	[SerializeField] private GameObject paddleRed;
+	[SerializeField] private GameObject paddleBlue;
+
+	private PaddleController paddleRedController;
+	private PaddleController paddleBlueController;
+
+	private int redPlayerIndex;
+	private int bluePlayerIndex;
+
+	public const int TEAM_RED = 0;
+	public const int TEAM_BLUE = 1;
 
 	private GameObject[] playerObjects;
-	private PaddleController[] paddleControllers;
+	//private PaddleController[] paddleControllers; // RED,BLUE
+	private PlayerController[] playerControllers; 
 
 	[SyncVar]
 	public int playersConnected = -1;
@@ -23,19 +35,26 @@ public class GameController : NetworkBehaviour  {
 	private int redScore = 0;
 	private int blueScore = 0;
 
+	private bool practiceGame = false;
+	private Bot bot;
+
 	public bool isPaused = false;
 
 
 	void Start () {
 		if(scoreText == null){ 	throw new UnityException("GameController: Score text is not assigned!"); }
 		if(ball == null){ 		throw new UnityException("GameController: Ball is not assigned!"); }
-		if(menu == null){ 		throw new UnityException("GameController: menu is not assigned!"); }
+		if(paddleRed == null){ 	throw new UnityException("GameController: paddleRed is not assigned!"); }
+		if(paddleBlue == null){ throw new UnityException("GameController: paddleBlue is not assigned!"); }
 
 		ballController = ball.GetComponent<BallController> ();
 		redScore = 0;
 		blueScore = 0;
 
-		paddleControllers = new PaddleController[2];
+		paddleRedController = paddleRed.GetComponent<PaddleController> ();
+		paddleBlueController = paddleBlue.GetComponent<PaddleController>();
+
+		playerControllers = new PlayerController[2];
 	}
 
 
@@ -61,6 +80,7 @@ public class GameController : NetworkBehaviour  {
 			return;
 		}
 
+		updatePaddles ();
 
 		if(ballController.goalHit == GOAL_RED){									//Красный гол
 			blueScore++;
@@ -75,12 +95,26 @@ public class GameController : NetworkBehaviour  {
 
 	}
 
-	void findPlayerObejcts(){
-		playerObjects = GameObject.FindGameObjectsWithTag ("Paddle");
+	void updatePaddles(){ // Авторитарно обновляем ввод игроков
+		if(playerControllers[redPlayerIndex] != null){
+			paddleRedController.up = playerControllers[redPlayerIndex].up;
+			paddleRedController.down = playerControllers[redPlayerIndex].down;
+		}
+
+		if (playerControllers [bluePlayerIndex] != null) {
+			paddleBlueController.up = playerControllers [bluePlayerIndex].up;
+			paddleBlueController.down = playerControllers [bluePlayerIndex].down;
+		}
+	}
+
+
+
+	void findPlayerObejects(){
+		playerObjects = GameObject.FindGameObjectsWithTag ("Player");
 
 		if(playerObjects.Length == 2){
-			paddleControllers[0] = playerObjects[0].GetComponent<PaddleController>();
-			paddleControllers[1] = playerObjects[1].GetComponent<PaddleController>();
+			playerControllers[0] = playerObjects[0].GetComponent<PlayerController>();
+			playerControllers[1] = playerObjects[1].GetComponent<PlayerController>();
 			
 			
 		}
@@ -88,9 +122,9 @@ public class GameController : NetworkBehaviour  {
 	}
 
 	public bool checkReady(){
-		findPlayerObejcts ();
+		findPlayerObejects ();
 		// Если оба представлния игрока добавлены на сцену и netId каждого не 0, мы готовы начать.
-		return (playerObjects.Length == 2 && paddleControllers[0].netId.Value > 0 && paddleControllers[1].netId.Value > 0 );
+		return (playerObjects.Length == 2 && playerControllers[0].netId.Value > 0 && playerControllers[1].netId.Value > 0 );
 	}
 
 	void setupPlayerObjects(){
@@ -98,27 +132,48 @@ public class GameController : NetworkBehaviour  {
 		// Вычисляем кто первый игрок, кто второй, расставляем по местам и перекрашиваем второго в синий.
 		// Стоит заметить, мы легко могли бы знать, что первый игрок тот, кто нажал в меню "создать", а второй - кто подключился, но это был бы костыль.
 
-		findPlayerObejcts ();
+		findPlayerObejects ();
 
 
 
 		if (playerObjects.Length == 2) {
 
-			if( paddleControllers[0].netId.Value < paddleControllers[1].netId.Value){ // Объект 0 был создан раньше - > он красный
-				paddleControllers[0].setRed();
-				paddleControllers[1].setBlue();
+			if( playerControllers[0].netId.Value < playerControllers[1].netId.Value){ // Объект 0 был создан раньше - > он красный
+				redPlayerIndex = 0;
+				bluePlayerIndex = 1;
 			} else {
-				paddleControllers[1].setRed();
-				paddleControllers[0].setBlue();
+				redPlayerIndex = 1;
+				bluePlayerIndex = 0;
 			}
+
+			playerControllers[redPlayerIndex].setTeam(TEAM_RED);
+			playerControllers[bluePlayerIndex].setTeam(TEAM_BLUE);
+
 		} else {
 			Debug.LogError("Only one player object! Something went wrong.");
 		}
 	}
 
+	void practiceGameQuickSetup(){
+		playerControllers[0] = GameObject.FindGameObjectWithTag ("Player").GetComponent<PlayerController>();
+		playerControllers[1] = bot;
+		redPlayerIndex = 0;
+		bluePlayerIndex = 1;
+		playerControllers[redPlayerIndex].setTeam(TEAM_RED);
+		playerControllers[bluePlayerIndex].setTeam(TEAM_BLUE);
+
+		ballController.unfreeze();
+		ballController.reset(); 
+	}
+
 	// Игра с ботом
 	public void startPracticeGame(){
+		bot = gameObject.AddComponent<Bot>();
+		bot.ball = ball;
+		bot.paddle = paddleBlue;
+		practiceGame = true;
 
+		practiceGameQuickSetup();
 	}
 
 	//Игра с человеком

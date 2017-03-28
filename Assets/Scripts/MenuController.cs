@@ -94,6 +94,7 @@ public class MenuController : MonoBehaviour
 			} else if(timeLeft <= 0f){
 				//Запускаем сервер с ботом
 				game.startPracticeGame();
+				hideMenu();
 				state = STATE_LOADING_PRACTICE_GAME;
 			} 
 
@@ -110,7 +111,7 @@ public class MenuController : MonoBehaviour
 			}
 
 		} else if(state == STATE_MULTIPLAYER_GAME  || state == STATE_PRACTICE_GAME){
-			checkDisconnect();
+			//checkDisconnect();
 
 			if (Input.GetKeyDown(KeyCode.Escape))
 			{

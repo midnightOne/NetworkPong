@@ -4,41 +4,36 @@ using UnityEngine.Networking;
 
 public class PaddleController : NetworkBehaviour {
 
-	[SerializeField] private Material blueMaterial;
-	public NetworkInstanceId netId;
+	public bool up = false;
+	public bool down = false;
+	[SerializeField] private GameObject spawnPositionObject;
 
-	void Start ()
-	{
-		netId = GetComponent<NetworkIdentity>().netId;
+	public void moveUp(){
+		up = true;
+	}
+	public void moveDown(){
+		down = true;
 	}
 
-	public void setRed(){
-		// Поскольку NetworkManager не умеет детерминированно спавнить даже при RoundRobin, то сами вычисляем где какой спавн.
-
-		GameObject tempObject = GameObject.Find ("RedSpawnPosition");
-		gameObject.transform.position = tempObject.transform.position;
-		gameObject.transform.rotation = tempObject.transform.rotation;
+	void reset(){
+		gameObject.transform.position = spawnPositionObject.transform.position;
+		gameObject.transform.rotation = spawnPositionObject.transform.rotation;
 	}
+	
 
-	public void setBlue(){
-		GameObject tempObject = GameObject.Find ("BlueSpawnPosition");
-		gameObject.transform.position = tempObject.transform.position;
-		gameObject.transform.rotation = tempObject.transform.rotation;
-
-		if(blueMaterial != null){
-			gameObject.GetComponent<Renderer> ().material = blueMaterial;
+	// Двигаем рактетку только на сервере чтобы избежать нечесной игры.
+	void Update () {
+		if (isServer) {
+			if (up != down) { // Если оба направления - стоим на месте, иначе - двигаемся
+				if (up) {
+					gameObject.transform.Translate (new Vector3 (0, 0.1f, 0));
+				} else if (down) {
+					gameObject.transform.Translate (new Vector3 (0, -0.1f, 0));
+				}
+			}
+			up = false;
+			down = false;
 		}
 	}
 
-
-	void Update () {
-		if(isLocalPlayer){ // выполняем только для игрока
-			if(Input.GetKey(KeyCode.UpArrow)){
-				gameObject.transform.Translate(new Vector3(0,0.1f,0));
-			} else if(Input.GetKey(KeyCode.DownArrow)){
-				gameObject.transform.Translate(new Vector3(0,-0.1f,0));
-			}
-		} 
-
-	}
 }
