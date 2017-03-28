@@ -10,6 +10,12 @@ public class NetworkManagerExtension : NetworkManager {
 	void Start () {
 	}
 
+	public override void OnClientError (NetworkConnection conn, int errorCode)
+	{
+		//StopHost ();
+		base.OnClientError (conn, errorCode);
+	}
+
 	public override void OnServerConnect (NetworkConnection conn)
 	{
 		playersConnected++;

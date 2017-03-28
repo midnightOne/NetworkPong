@@ -5,16 +5,11 @@ using UnityEngine.Networking;
 public class PaddleController : NetworkBehaviour {
 
 	[SerializeField] private Material blueMaterial;
-	public float creationTime;
+	public NetworkInstanceId netId;
 
-	void Awake(){
-		creationTime = Time.time;
-	}
-
-	// При старте игрока
-	void Start(){
-
-
+	void Start ()
+	{
+		netId = GetComponent<NetworkIdentity>().netId;
 	}
 
 	public void setRed(){

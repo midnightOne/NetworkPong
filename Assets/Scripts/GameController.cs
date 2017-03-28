@@ -7,10 +7,11 @@ public class GameController : NetworkBehaviour  {
 
 	[SerializeField] private Text scoreText;
 	[SerializeField] private GameObject ball;
-	[SerializeField] private float noHitResetSeconds=15f; // через сколько времени после последнего касания шаром ракетки ресетнуть его
+	[SerializeField] private float noHitResetSeconds=20f; // через сколько времени после последнего касания шаром ракетки ресетнуть его
 	[SerializeField] private MenuController menu;
 
 	private GameObject[] playerObjects;
+	private PaddleController[] paddleControllers;
 
 	[SyncVar]
 	public int playersConnected = -1;
@@ -33,6 +34,8 @@ public class GameController : NetworkBehaviour  {
 		ballController = ball.GetComponent<BallController> ();
 		redScore = 0;
 		blueScore = 0;
+
+		paddleControllers = new PaddleController[2];
 	}
 
 
@@ -72,25 +75,44 @@ public class GameController : NetworkBehaviour  {
 
 	}
 
-	void setupPlayerObjects(){
+	void findPlayerObejcts(){
 		playerObjects = GameObject.FindGameObjectsWithTag ("Paddle");
-		PaddleController controller_0;
-		PaddleController controller_1;
+
+		if(playerObjects.Length == 2){
+			paddleControllers[0] = playerObjects[0].GetComponent<PaddleController>();
+			paddleControllers[1] = playerObjects[1].GetComponent<PaddleController>();
+			
+			
+		}
+
+	}
+
+	public bool checkReady(){
+		findPlayerObejcts ();
+		// Если оба представлния игрока добавлены на сцену и netId каждого не 0, мы готовы начать.
+		return (playerObjects.Length == 2 && paddleControllers[0].netId.Value > 0 && paddleControllers[1].netId.Value > 0 );
+	}
+
+	void setupPlayerObjects(){
+
+		// Вычисляем кто первый игрок, кто второй, расставляем по местам и перекрашиваем второго в синий.
+		// Стоит заметить, мы легко могли бы знать, что первый игрок тот, кто нажал в меню "создать", а второй - кто подключился, но это был бы костыль.
+
+		findPlayerObejcts ();
+
 
 
 		if (playerObjects.Length == 2) {
-			controller_0 = playerObjects[0].GetComponent<PaddleController>();
-			controller_1 = playerObjects[1].GetComponent<PaddleController>();
 
-			if(controller_0.creationTime < controller_1.creationTime){ // Объект 0 был создан раньше - > он красный
-				controller_0.setRed();
-				controller_1.setBlue();
+			if( paddleControllers[0].netId.Value < paddleControllers[1].netId.Value){ // Объект 0 был создан раньше - > он красный
+				paddleControllers[0].setRed();
+				paddleControllers[1].setBlue();
 			} else {
-				controller_1.setRed();
-				controller_0.setBlue();
+				paddleControllers[1].setRed();
+				paddleControllers[0].setBlue();
 			}
 		} else {
-			Debug.LogError("Only one player object! Something gone wrong.");
+			Debug.LogError("Only one player object! Something went wrong.");
 		}
 	}
 
@@ -101,6 +123,7 @@ public class GameController : NetworkBehaviour  {
 
 	//Игра с человеком
 	public void startMultiplayerGame(){
+		//StartCoroutine("delayedGameStart");
 		setupPlayerObjects ();
 
 		ballController.unfreeze();
@@ -115,9 +138,10 @@ public class GameController : NetworkBehaviour  {
 		yield return new WaitForSeconds(0.5f);
 
 		//Физика мяча считается только на сервере, поэтому манипуляции с ним нужно провести только там
+		setupPlayerObjects ();
+		
 		ballController.unfreeze();
-		ballController.reset(); 
-		RpcGameStart ();
+		ballController.reset();
 		yield break;
 
 	}

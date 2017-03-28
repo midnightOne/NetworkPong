@@ -19,7 +19,6 @@ public class BallController : NetworkBehaviour {
 			return;
 		}
 
-
 		freeze ();
 		GetComponent<Rigidbody> ().velocity = new Vector3 (2,0,0);
 
@@ -57,10 +56,16 @@ public class BallController : NetworkBehaviour {
 	}
 
 	public void reset(){
+		GetComponent<Collider> ().enabled = isServer; // Если клиент стал сервером, то без этой строчки у него шар бы остался без коллайдера
+
 		goalHit = 0;
 		gameObject.transform.position = startPos;
-		GetComponent<Rigidbody> ().velocity = new Vector3 (2,0,0);
+		GetComponent<Rigidbody> ().velocity = new Vector3 (randomDirection*2,0,0);
 		lastHitTime=Time.time;
+	}
+
+	float randomDirection(){
+		return Mathf.Round (Random.value) * 2 - 1; // -1 или 1
 	}
 
 

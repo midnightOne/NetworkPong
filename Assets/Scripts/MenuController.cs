@@ -19,6 +19,7 @@ public class MenuController : MonoBehaviour
 	[SerializeField] private Camera orbitCamera;
 	[SerializeField] private GameController game;
 	[SerializeField] private float waitForConnectionTime = 15f; // Время на подключение второго игрока перед щапуском сервера с ботом
+	[SerializeField] private Text statusText;
 
 	private float serverCreateTime;
 
@@ -28,8 +29,12 @@ public class MenuController : MonoBehaviour
 	const int STATE_CONNECTING = 2;
 	const int STATE_LOADING_MULTIPLAYER_GAME = 3;
 	const int STATE_LOADING_PRACTICE_GAME = 4;
+	const int STATE_MULTIPLAYER_GAME = 5;
+	const int STATE_PRACTICE_GAME = 6;
 
 	private int state = STATE_IDLE;
+
+	private bool isHost = false;
 
 
 	void Awake()
@@ -52,7 +57,8 @@ public class MenuController : MonoBehaviour
 	}
 
 	void initMenu(){
-
+		setButtonText(HostButton, "Создать игру");
+		setButtonText(ConnectButton, "Присоединиться к игре");
 		menuCamera.enabled = true;
 		orbitCamera.enabled = true;
 		gameCamera.enabled = false;
@@ -60,6 +66,7 @@ public class MenuController : MonoBehaviour
 		ConnectButton.onClick.AddListener(clickConnect);
 		waitingText.enabled = false;
 		connectingText.enabled = false;
+		statusText.text = "";
 	}
 
 	void hideMenu(){
@@ -75,13 +82,13 @@ public class MenuController : MonoBehaviour
 	void Update()
 	{
 		float timeLeft;
-		if (state == STATE_WAITING_FOR_PLAYER_2){
+		if (state == STATE_WAITING_FOR_PLAYER_2){ // ждем второго игрока
 			timeLeft = waitForConnectionTime - Time.time + serverCreateTime;
 			waitingText.text = "Ожидаем соперника..." + timeLeft;
 
-			if(game.playersConnected == 2){
+			if(game.playersConnected == 2){ 
 				//Запускаем игру на двоих
-				game.startMultiplayerGame();
+
 				state = STATE_LOADING_MULTIPLAYER_GAME;
 
 			} else if(timeLeft <= 0f){
@@ -90,7 +97,30 @@ public class MenuController : MonoBehaviour
 				state = STATE_LOADING_PRACTICE_GAME;
 			} 
 
+		} else if (state == STATE_CONNECTING){ // Подключаемся к серверу/хосту
+			if(game.playersConnected == 2){ 
+				//Запускаем игру на двоих
+				state = STATE_LOADING_MULTIPLAYER_GAME;
+			}
+		} else if (state == STATE_LOADING_MULTIPLAYER_GAME){ // Сервер говорит, что подключилось 2 игрока, но мы еще не знаем, инициализировались-ли объекты игроков на клиентах
+			if(game.checkReady()){
+				game.startMultiplayerGame();
+				hideMenu();
+				state = STATE_MULTIPLAYER_GAME;
+			}
+
+		} else if(state == STATE_MULTIPLAYER_GAME  || state == STATE_PRACTICE_GAME){
+			checkDisconnect();
+
+			if (Input.GetKeyDown(KeyCode.Escape))
+			{
+				stopMultiplayerGame();
+
+			}
 		}
+
+
+
 		
 		/*if (!manager.IsClientConnected() && !NetworkServer.active && manager.matchMaker == null)
 		{
@@ -119,21 +149,41 @@ public class MenuController : MonoBehaviour
 		}*/
 	}
 
+	void stopMultiplayerGame(){
+		if(isHost){
+			manager.StopHost();
+		} else {
+			manager.StopClient();
+		}
+		initMenu();
+		state = STATE_IDLE;
+	}
+
+	void checkDisconnect(){
+		if (!isHost && (manager.client == null || !manager.client.isConnected)){
+			stopMultiplayerGame();
+			statusText.text = "Соединение с сервером было потеряно";
+		}
+
+	}
 
 
 	void clickHost(){
 		if(state == STATE_IDLE){ // Запуск сервера
 			waitingText.enabled = true;
 			state = STATE_WAITING_FOR_PLAYER_2;
-			HostButton.GetComponentsInChildren<Text>()[0].text = "Отмена";
+			setButtonText(HostButton, "Отмена");
+
 			manager.StartHost ();
 			serverCreateTime = Time.time;
+			isHost = true;
 
 		} else if(state == STATE_WAITING_FOR_PLAYER_2){ // Отмена
-			HostButton.GetComponentsInChildren<Text>()[0].text = "Создать игру";
+			setButtonText(HostButton, "Создать игру");
 			waitingText.enabled = false;
 			state = STATE_IDLE;
 			manager.StopHost();
+			isHost = false;
 		}
 	}
 
@@ -141,15 +191,22 @@ public class MenuController : MonoBehaviour
 		if(state == STATE_IDLE){ // Подключение к серверу
 			connectingText.enabled = true;
 			state = STATE_CONNECTING;
-			ConnectButton.GetComponentsInChildren<Text>()[0].text = "Отмена";
+			setButtonText(ConnectButton, "Отмена");
+
 			manager.StartClient();
+			isHost = false;
 		} else if (state == STATE_CONNECTING){ // Отмена
 			connectingText.enabled = false;
-			ConnectButton.GetComponentsInChildren<Text>()[0].text = "Присоединиться к игре";
+			setButtonText(ConnectButton, "Присоединиться к игре");
+
 			state = STATE_IDLE;
 			manager.StopClient();
 		}
 
+	}
+
+	void setButtonText(Button btn, string text){
+		btn.GetComponentsInChildren<Text>()[0].text = text;
 	}
 	
 	void OnGUI()
