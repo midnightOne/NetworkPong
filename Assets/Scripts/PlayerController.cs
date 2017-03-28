@@ -5,7 +5,7 @@ using UnityEngine.Networking;
 [NetworkSettings(sendInterval=0.05f)]
 public class PlayerController : NetworkBehaviour {
 
-	public NetworkInstanceId netId;
+	//public NetworkInstanceId netId;
 
 	/*	На клиенте только один gameObject и его скрипты могут отправлять команды на сервер (и это объект игрока),
 	 * поэтому алгоритм такой: Пользователь нажимает Esc -> экземпляр этого компонента на объекте игрока на его клиенте
@@ -24,7 +24,7 @@ public class PlayerController : NetworkBehaviour {
 	
 	void Start ()
 	{
-		netId = GetComponent<NetworkIdentity>().netId;
+		//netId = GetComponent<NetworkIdentity>().netId;
 		
 	}
 

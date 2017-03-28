@@ -22,7 +22,6 @@ public class GameController : NetworkBehaviour  {
 	public const int TEAM_BLUE = 1;
 
 	private GameObject[] playerObjects;
-	//private PaddleController[] paddleControllers; // RED,BLUE
 	private PlayerController[] playerControllers; 
 
 	[SyncVar]
@@ -30,8 +29,6 @@ public class GameController : NetworkBehaviour  {
 
 	public const int GOAL_RED = 1;
 	public const int GOAL_BLUE = 2;
-
-	//private bool goalCounted = false;
 
 
 	public bool allPlayersConnected = false; 	// Подключены оба игрока
@@ -87,8 +84,6 @@ public class GameController : NetworkBehaviour  {
 	}
 
 
-
-
 	void Update () {
 		allPlayersConnected = (playersConnected == 2); // Ставим флаг готовности по количеству игроков
 
@@ -99,7 +94,6 @@ public class GameController : NetworkBehaviour  {
 		if(allPlayersReady || practiceGame){
 			checkPauseRequests ();
 		}
-
 
 		updatePlayersConnected ();
 
@@ -131,9 +125,9 @@ public class GameController : NetworkBehaviour  {
 		}
 
 		if(redScore >= 10){
-			victory = 0;
+			victory = 0; // Красная победа
 		} else if(blueScore >= 10){
-			victory = 1;
+			victory = 1; // Синяя победа
 		}
 	}
 
@@ -157,8 +151,7 @@ public class GameController : NetworkBehaviour  {
 		if(playerObjects.Length == 2){
 			playerControllers[0] = playerObjects[0].GetComponent<PlayerController>();
 			playerControllers[1] = playerObjects[1].GetComponent<PlayerController>();
-			
-			
+
 		}
 
 	}
@@ -176,8 +169,6 @@ public class GameController : NetworkBehaviour  {
 		// Стоит заметить, мы легко могли бы знать, что первый игрок тот, кто нажал в меню "создать", а второй - кто подключился, но это был бы костыль.
 
 		findPlayerObejects ();
-
-
 
 		if (playerObjects.Length == 2) {
 
@@ -270,13 +261,6 @@ public class GameController : NetworkBehaviour  {
 
 	//--------------------------------------------------------------------------------------------------------
 	// /ПАУЗА 
-
-
-	// По требованию сервера запускаем игру
-	[ClientRpc]
-	void RpcGameStart(){
-		//menu.showGame ();
-	}
 
 
 	void updateScoreText(){

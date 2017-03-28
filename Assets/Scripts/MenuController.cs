@@ -174,36 +174,6 @@ public class MenuController : MonoBehaviour
 			}
 		}
 
-
-		if(Input.GetKeyDown(KeyCode.R)){
-			Application.LoadLevel(Application.loadedLevel);
-		}
-		
-		/*if (!manager.IsClientConnected() && !NetworkServer.active && manager.matchMaker == null)
-		{
-			if (UnityEngine.Application.platform != RuntimePlatform.WebGLPlayer)
-			{
-				if (Input.GetKeyDown(KeyCode.S))
-				{
-					manager.StartServer();
-				}
-				if (Input.GetKeyDown(KeyCode.H))
-				{
-					manager.StartHost();
-				}
-			}
-			if (Input.GetKeyDown(KeyCode.C))
-			{
-				manager.StartClient();
-			}
-		}
-		if (NetworkServer.active && manager.IsClientConnected())
-		{
-			if (Input.GetKeyDown(KeyCode.X))
-			{
-				manager.StopHost();
-			}
-		}*/
 	}
 
 	void stopMultiplayerGame(){
