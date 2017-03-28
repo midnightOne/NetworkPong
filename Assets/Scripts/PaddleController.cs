@@ -25,9 +25,9 @@ public class PaddleController : NetworkBehaviour {
 	void Update () {
 		if (isServer) {
 			if (up != down) { // Если оба направления - стоим на месте, иначе - двигаемся
-				if (up) {
+				if (up && gameObject.transform.position.z < -0.2f) {
 					gameObject.transform.Translate (new Vector3 (0, 0.1f, 0));
-				} else if (down) {
+				} else if (down && gameObject.transform.position.z > -9.1) {
 					gameObject.transform.Translate (new Vector3 (0, -0.1f, 0));
 				}
 			}

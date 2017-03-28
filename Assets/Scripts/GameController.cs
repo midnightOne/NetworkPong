@@ -40,7 +40,7 @@ public class GameController : NetworkBehaviour  {
 	private BallController ballController;
 	private int redScore = 0;
 	private int blueScore = 0;
-	public int victory = -1;
+	[SyncVar] public int victory = -1;
 
 	private bool practiceGame = false;
 	private Bot bot;
@@ -54,6 +54,7 @@ public class GameController : NetworkBehaviour  {
 		allPlayersReady = false;
 		redScore = 0;
 		blueScore = 0;
+		updateScoreText ();
 		victory = -1;
 		practiceGame = false;
 		isPaused = false;
@@ -130,9 +131,9 @@ public class GameController : NetworkBehaviour  {
 		}
 
 		if(redScore >= 10){
-			victory = 1;
+			victory = 0;
 		} else if(blueScore >= 10){
-			victory = 2;
+			victory = 1;
 		}
 	}
 

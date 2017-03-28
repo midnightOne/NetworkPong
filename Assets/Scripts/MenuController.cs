@@ -120,8 +120,9 @@ public class MenuController : MonoBehaviour
 
 
 	void returnToMenu(){
-		ingamePanelButton.onClick.RemoveListener(returnToMenu);
-
+		ingamePanelButton.onClick.RemoveAllListeners();
+		stopMultiplayerGame ();
+		ingamePanel.SetActive (false);
 	}
 
 	void Update()
@@ -157,12 +158,9 @@ public class MenuController : MonoBehaviour
 		} else if(state == STATE_MULTIPLAYER_GAME  || state == STATE_PRACTICE_GAME){
 			checkDisconnect();
 
-			/*if (Input.GetKeyDown(KeyCode.Escape))
-			{
-				game.Pause();
-
-				//stopMultiplayerGame();
-			}*/
+			if(game.victory >= 0){
+				showVictoryScreen();
+			}
 
 			if(game.IsPaused && !isPaused){
 				isPaused = true;
@@ -177,7 +175,9 @@ public class MenuController : MonoBehaviour
 		}
 
 
-
+		if(Input.GetKeyDown(KeyCode.R)){
+			Application.LoadLevel(Application.loadedLevel);
+		}
 		
 		/*if (!manager.IsClientConnected() && !NetworkServer.active && manager.matchMaker == null)
 		{
