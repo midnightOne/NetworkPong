@@ -7,6 +7,8 @@ public class BallController : NetworkBehaviour {
 	private Vector3 newVelocity = Vector3.zero;
 	private Vector3 startPos;
 
+	private Vector3 velocityCache;
+
 	public float lastHitTime = 0; //Когда в последний раз шар касался ракеток или гола, нужно для вычисления застревания.
 
 	public int goalHit = 0; 
@@ -48,11 +50,13 @@ public class BallController : NetworkBehaviour {
 	}
 
 	public void freeze(){
+		velocityCache = GetComponent<Rigidbody> ().velocity;
 		GetComponent<Rigidbody> ().isKinematic = true;
 	}
 
 	public void unfreeze(){
 		GetComponent<Rigidbody> ().isKinematic = false;
+		GetComponent<Rigidbody> ().velocity = velocityCache;
 	}
 
 	public void reset(){

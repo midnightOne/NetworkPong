@@ -7,9 +7,19 @@ public class PlayerController : NetworkBehaviour {
 
 	public NetworkInstanceId netId;
 
+	/*	На клиенте только один gameObject и его скрипты могут отправлять команды на сервер (и это объект игрока),
+	 * поэтому алгоритм такой: Пользователь нажимает Esc -> экземпляр этого компонента на объекте игрока на его клиенте
+	 * отправляет команду такому же экземпляру этого компонента на объекте игрока, но на сервере, а тот записывает желание в эту переменную.
+	 * Потом серверный геймконтроллер читает ее и уже тогда отправляет всем клиентам команду о паузе.
+	 * */
+	[SyncVar]
+	public bool wantsToTogglePause = false;
+
+
 	[SyncVar] public bool up = false;
 	[SyncVar] public bool down = false;
 
+	[SyncVar]
 	public int team = -1;
 	
 	void Start ()
@@ -19,21 +29,9 @@ public class PlayerController : NetworkBehaviour {
 	}
 
 	public void setTeam(int newTeam){
-		//paddle = newPaddle;
 		team = newTeam;
 	}
-	/*
-	public void assignRed(){
-		
-		paddle = GameObject.Find ("Paddle_Red").GetComponent<PaddleController>();
-		team = TEAM_RED;
-	}
-	
-	public void assignBlue(){
-		paddle = GameObject.Find ("Paddle_Blue").GetComponent<PaddleController>();
-		team = TEAM_BLUE;
 
-	}*/
 
 	//Отправляем ввод игрока на сервер, а тот уже принимает решения.
 	[Command]
@@ -42,10 +40,26 @@ public class PlayerController : NetworkBehaviour {
 		down = downInput;
 	}
 
+	//Отправляем ввод игрока на сервер, а тот уже принимает решения.
+	[Command]
+	void CmdTogglePause(){
+		wantsToTogglePause = true;
+	}
+
 
 	void Update () {
+
 		if(isLocalPlayer){ // выполняем только для игрока
-			CmdUpdateInputs(Input.GetKey(KeyCode.UpArrow), Input.GetKey(KeyCode.DownArrow));
+			bool currentUp = Input.GetKey (KeyCode.UpArrow);
+			bool currentDown = Input.GetKey (KeyCode.DownArrow);
+			if(up != currentUp || down != currentDown){ // чтобы не тратить зря трафик, отправляем только если что-то изменилось
+				CmdUpdateInputs(currentUp, currentDown);
+			}
+
+			if (Input.GetKeyDown(KeyCode.Escape) && !wantsToTogglePause)
+			{
+				CmdTogglePause();
+			}
 		} 
 	}
 }

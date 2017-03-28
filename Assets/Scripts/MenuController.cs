@@ -21,8 +21,13 @@ public class MenuController : MonoBehaviour
 	[SerializeField] private float waitForConnectionTime = 15f; // Время на подключение второго игрока перед щапуском сервера с ботом
 	[SerializeField] private Text statusText;
 
+	[SerializeField] private GameObject ingamePanel;
+	[SerializeField] private Text ingamePanelText;
+	[SerializeField] private Button ingamePanelButton;
+
 	private float serverCreateTime;
 
+	private string[] colors = {"Красный", "Синий"};
 
 	const int STATE_IDLE = 0;
 	const int STATE_WAITING_FOR_PLAYER_2 = 1;
@@ -31,6 +36,8 @@ public class MenuController : MonoBehaviour
 	const int STATE_LOADING_PRACTICE_GAME = 4;
 	const int STATE_MULTIPLAYER_GAME = 5;
 	const int STATE_PRACTICE_GAME = 6;
+
+	private bool isPaused = false;
 
 	private int state = STATE_IDLE;
 
@@ -67,6 +74,8 @@ public class MenuController : MonoBehaviour
 		waitingText.enabled = false;
 		connectingText.enabled = false;
 		statusText.text = "";
+
+		ingamePanel.SetActive (false);
 	}
 
 	void hideMenu(){
@@ -79,27 +88,62 @@ public class MenuController : MonoBehaviour
 
 	}
 
+
+
+	void showPauseMenu(){
+		ingamePanel.SetActive (true);
+		ingamePanelText.text = "Пауза";
+		setButtonText(ingamePanelButton, "Выйти в меню");
+		ingamePanelButton.onClick.AddListener(exitToMenu);
+
+	}
+
+	void exitToMenu(){
+		stopMultiplayerGame ();
+		ingamePanelButton.onClick.RemoveAllListeners ();
+		ingamePanel.SetActive (false);
+		//game.Unpause();
+	}
+
+	void closePauseMenu(){
+		ingamePanelButton.onClick.RemoveAllListeners();
+		ingamePanel.SetActive (false);
+	}
+
+	void showVictoryScreen(){
+		ingamePanel.SetActive (true);
+		ingamePanelText.text = colors[game.victory] + " игрок победил!";
+		setButtonText(ingamePanelButton, "Вернуться в меню");
+		ingamePanelButton.onClick.AddListener(returnToMenu);
+
+	}
+
+
+	void returnToMenu(){
+		ingamePanelButton.onClick.RemoveListener(returnToMenu);
+
+	}
+
 	void Update()
 	{
 		float timeLeft;
-		if (state == STATE_WAITING_FOR_PLAYER_2){ // ждем второго игрока
+		if (state == STATE_WAITING_FOR_PLAYER_2){ 							// ждем второго игрока
 			timeLeft = waitForConnectionTime - Time.time + serverCreateTime;
 			waitingText.text = "Ожидаем соперника..." + timeLeft;
 
-			if(game.playersConnected == 2){ 
-				//Запускаем игру на двоих
-
+			if(game.allPlayersConnected){ 
+																			//Запускаем игру на двоих
 				state = STATE_LOADING_MULTIPLAYER_GAME;
 
 			} else if(timeLeft <= 0f){
-				//Запускаем сервер с ботом
+																			//Запускаем сервер с ботом
 				game.startPracticeGame();
 				hideMenu();
-				state = STATE_LOADING_PRACTICE_GAME;
+				state = STATE_PRACTICE_GAME;
 			} 
 
-		} else if (state == STATE_CONNECTING){ // Подключаемся к серверу/хосту
-			if(game.playersConnected == 2){ 
+		} else if (state == STATE_CONNECTING){ 								// Подключаемся к серверу/хосту
+			if(game.allPlayersConnected){ 
 				//Запускаем игру на двоих
 				state = STATE_LOADING_MULTIPLAYER_GAME;
 			}
@@ -111,12 +155,24 @@ public class MenuController : MonoBehaviour
 			}
 
 		} else if(state == STATE_MULTIPLAYER_GAME  || state == STATE_PRACTICE_GAME){
-			//checkDisconnect();
+			checkDisconnect();
 
-			if (Input.GetKeyDown(KeyCode.Escape))
+			/*if (Input.GetKeyDown(KeyCode.Escape))
 			{
-				stopMultiplayerGame();
+				game.Pause();
 
+				//stopMultiplayerGame();
+			}*/
+
+			if(game.IsPaused && !isPaused){
+				isPaused = true;
+				showPauseMenu();
+			}
+
+			if(!game.IsPaused && isPaused){
+				isPaused = false;
+				closePauseMenu();
+				
 			}
 		}
 
@@ -157,6 +213,8 @@ public class MenuController : MonoBehaviour
 			manager.StopClient();
 		}
 		initMenu();
+		game.resetGame ();
+
 		state = STATE_IDLE;
 	}
 
@@ -209,83 +267,5 @@ public class MenuController : MonoBehaviour
 	void setButtonText(Button btn, string text){
 		btn.GetComponentsInChildren<Text>()[0].text = text;
 	}
-	
-	void OnGUI()
-	{
-		
-		bool noConnection = (manager.client == null || manager.client.connection == null ||
-		                     manager.client.connection.connectionId == -1);
-		
-		if (!manager.IsClientConnected() && !NetworkServer.active && manager.matchMaker == null)
-		{
-			if (noConnection)
-			{
 
-
-
-				/*if (GUI.Button(new Rect(xpos, ypos, 200, 20), "LAN Host(H)"))
-				{
-					manager.StartHost();
-				}
-
-				
-				if (GUI.Button(new Rect(xpos, ypos, 105, 20), "LAN Client(C)"))
-				{
-					manager.StartClient();
-				}
-				
-				manager.networkAddress = GUI.TextField(new Rect(xpos + 100, ypos, 95, 20), manager.networkAddress);
-
-				if (GUI.Button(new Rect(xpos, ypos, 200, 20), "LAN Server Only(S)"))
-				{
-					manager.StartServer();
-				}*/
-
-			}
-			else
-			{/*
-				GUI.Label(new Rect(xpos, ypos, 200, 20), "Connecting to " + manager.networkAddress + ":" + manager.networkPort + "..");
-				ypos += spacing;
-				
-				
-				if (GUI.Button(new Rect(xpos, ypos, 200, 20), "Cancel Connection Attempt"))
-				{
-					manager.StopClient();
-				}*/
-			}
-		}
-		else
-		{/*
-
-			if (manager.IsClientConnected())
-			{
-				GUI.Label(new Rect(xpos, ypos, 300, 20), "Client: address=" + manager.networkAddress + " port=" + manager.networkPort);
-				ypos += spacing;
-			}*/
-		}
-		
-		if (manager.IsClientConnected() && !ClientScene.ready)
-		{/*
-			if (GUI.Button(new Rect(xpos, ypos, 200, 20), "Client Ready"))
-			{
-				ClientScene.Ready(manager.client.connection);
-				
-				if (ClientScene.localPlayers.Count == 0)
-				{
-					ClientScene.AddPlayer(0);
-				}
-			}
-			ypos += spacing;*/
-		}
-		
-		if (NetworkServer.active || manager.IsClientConnected())
-		{/*
-			if (GUI.Button(new Rect(xpos, ypos, 200, 20), "Stop (X)"))
-			{
-				manager.StopHost();
-			}
-			ypos += spacing;*/
-		}
-
-	}
 }

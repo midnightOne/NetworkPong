@@ -31,15 +31,43 @@ public class GameController : NetworkBehaviour  {
 	public const int GOAL_RED = 1;
 	public const int GOAL_BLUE = 2;
 
+	//private bool goalCounted = false;
+
+
+	public bool allPlayersConnected = false; 	// Подключены оба игрока
+	public bool allPlayersReady = false;		// У обоих игроков загрузились объекты (до этого игру начинать нельзя)
+
 	private BallController ballController;
 	private int redScore = 0;
 	private int blueScore = 0;
+	public int victory = -1;
 
 	private bool practiceGame = false;
 	private Bot bot;
 
-	public bool isPaused = false;
+	private bool isPaused = false;
 
+
+	public void resetGame(){
+		playersConnected = -1;
+		allPlayersConnected = false;
+		allPlayersReady = false;
+		redScore = 0;
+		blueScore = 0;
+		victory = -1;
+		practiceGame = false;
+		isPaused = false;
+		if (playerObjects != null) {
+			playerObjects [0] = null;
+			playerObjects [1] = null;
+		}
+		playerControllers [1] = null;
+		playerControllers [0] = null;
+
+		NetworkManagerExtension.playersConnected = 0;
+		ballController.reset ();
+
+	}
 
 	void Start () {
 		if(scoreText == null){ 	throw new UnityException("GameController: Score text is not assigned!"); }
@@ -58,41 +86,54 @@ public class GameController : NetworkBehaviour  {
 	}
 
 
-	void Update () {
 
+
+	void Update () {
+		allPlayersConnected = (playersConnected == 2); // Ставим флаг готовности по количеству игроков
 
 		if(!isServer){
 			return;
 		}
 
-		//Поскольку счет количества игроков идет только на сервере, записываем результат в синхронихируемую переменную
+		if(allPlayersReady || practiceGame){
+			checkPauseRequests ();
+		}
+
+
+		updatePlayersConnected ();
+
+		if(isPaused){ return; }
+
+		updatePaddles ();
+		updateScore();
+	}
+
+
+
+	void updatePlayersConnected(){
+		//Поскольку счет количества игроков идет только на сервере, записываем результат в синхронизируемую переменную
 		if(playersConnected != NetworkManagerExtension.playersConnected){
 			playersConnected = NetworkManagerExtension.playersConnected;
 			Debug.Log("PLAYERS: " + playersConnected);
-			if(playersConnected == 2){
-
-				//StartCoroutine("delayedGameStart");
-				//startGame();
-			}
 		}
+	}
 
-		if(isPaused){
-			return;
-		}
-
-		updatePaddles ();
-
-		if(ballController.goalHit == GOAL_RED){									//Красный гол
+	void updateScore(){
+		if(ballController.goalHit == GOAL_RED){					//Красный гол (Считаем только один раз)
 			blueScore++;
-			RpcResetRound(redScore, blueScore);
-		} else if(ballController.goalHit == GOAL_BLUE){ 						//Синий гол
+			resetRound();
+		} else if(ballController.goalHit == GOAL_BLUE){ 						//Синий гол (Считаем только один раз)
 			redScore++;
-			RpcResetRound(redScore, blueScore);
+			resetRound();
 		} else if(noHitResetSeconds < Time.time - ballController.lastHitTime){	//Мяч долго не касался ракеток и голов, скорее всего застрял -> ресетим
 			RpcResetRound(redScore, blueScore);
 		}
 
-
+		if(redScore >= 10){
+			victory = 1;
+		} else if(blueScore >= 10){
+			victory = 2;
+		}
 	}
 
 	void updatePaddles(){ // Авторитарно обновляем ввод игроков
@@ -123,8 +164,9 @@ public class GameController : NetworkBehaviour  {
 
 	public bool checkReady(){
 		findPlayerObejects ();
-		// Если оба представлния игрока добавлены на сцену и netId каждого не 0, мы готовы начать.
-		return (playerObjects.Length == 2 && playerControllers[0].netId.Value > 0 && playerControllers[1].netId.Value > 0 );
+		// Если оба объекты обоих игроков добавлены на сцену и netId каждого не 0, мы готовы начать.
+		allPlayersReady = (playerObjects.Length == 2 && playerControllers [0].netId.Value > 0 && playerControllers [1].netId.Value > 0);
+		return allPlayersReady;
 	}
 
 	void setupPlayerObjects(){
@@ -178,7 +220,6 @@ public class GameController : NetworkBehaviour  {
 
 	//Игра с человеком
 	public void startMultiplayerGame(){
-		//StartCoroutine("delayedGameStart");
 		setupPlayerObjects ();
 
 		ballController.unfreeze();
@@ -187,19 +228,48 @@ public class GameController : NetworkBehaviour  {
 		//RpcGameStart ();
 	}
 
-	IEnumerator delayedGameStart(){
+	//--------------------------------------------------------------------------------------------------------
+	// ПАУЗА 
 
-		// 
-		yield return new WaitForSeconds(0.5f);
+	void checkPauseRequests(){
+		if(playerControllers[0].wantsToTogglePause || playerControllers[1].wantsToTogglePause){
 
-		//Физика мяча считается только на сервере, поэтому манипуляции с ним нужно провести только там
-		setupPlayerObjects ();
+			playerControllers[0].wantsToTogglePause = false;
+			playerControllers[1].wantsToTogglePause = false;
+			togglePause();
+		}
 		
-		ballController.unfreeze();
-		ballController.reset();
-		yield break;
+	}
+
+	//Работает только на сервере
+	[Server]
+	void togglePause(){
+		if (isPaused) {
+			isPaused = false;
+			ballController.unfreeze ();
+			RpcUnPause();
+		} else {
+			isPaused = true;
+			ballController.freeze ();
+			RpcPause ();
+		}
 
 	}
+	
+	//Работает только на клиенте, вызывается с сервера (нажна чтобы сервер поставил на паузу остальных игроков в сети)
+	[ClientRpc]
+	private void RpcPause(){
+		isPaused = true;
+	}
+	
+	[ClientRpc]
+	private void RpcUnPause(){
+		isPaused = false;
+	}
+
+	//--------------------------------------------------------------------------------------------------------
+	// /ПАУЗА 
+
 
 	// По требованию сервера запускаем игру
 	[ClientRpc]
@@ -210,6 +280,12 @@ public class GameController : NetworkBehaviour  {
 
 	void updateScoreText(){
 		scoreText.text = redScore + " | " + blueScore;
+	}
+
+	void resetRound(){
+		ballController.reset ();
+		updateScoreText ();
+		RpcResetRound(redScore, blueScore);
 	}
 
 	// По требованию сервера производим ресет раунда
@@ -226,5 +302,11 @@ public class GameController : NetworkBehaviour  {
 	[ClientRpc]
 	void RpcResetGame(){
 		RpcResetRound (0,0);
+	}
+
+	public bool IsPaused {
+		get {
+			return isPaused;
+		}
 	}
 }

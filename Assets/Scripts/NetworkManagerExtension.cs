@@ -12,7 +12,7 @@ public class NetworkManagerExtension : NetworkManager {
 
 	public override void OnClientError (NetworkConnection conn, int errorCode)
 	{
-		//StopHost ();
+		// StopHost ();
 		base.OnClientError (conn, errorCode);
 	}
 
